@@ -43,6 +43,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
     dispatch_once(&onceToken, ^{
         instance = [[self alloc] init];
         instance.reconnectCount = 5;
+        instance.pingMsg = @"";
     });
     return instance;
 }
@@ -57,7 +58,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (OSocketStatus)oSocketSend:(id)data type:(OSocketSendType)type{
-#warning 发现有时候后台发close之后这里木有收到回调
+//warning 发现有时候后台发close之后这里木有收到回调
     if (_webSocket.readyState != SR_OPEN) return [OSocketRocketManager shareManager].socketStatus;
     
     if ([OSocketRocketManager shareManager].socketStatus == OSocketStatusConnected){
@@ -85,10 +86,9 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)connect{
-    NSLog(@"connect");
     if (_webSocket) return;
     
-    _webSocket = [[SRWebSocket alloc]initWithURL:[NSURL URLWithString:@"ws://192.168.1.64:9999/v1/ws"]];
+    _webSocket = [[SRWebSocket alloc]initWithURL:[NSURL URLWithString:self.socketURL]];
     _webSocket.delegate = self;
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
     [_webSocket open];
@@ -113,17 +113,14 @@ dispatch_async(dispatch_get_main_queue(), block);\
     }else {
         _reConnectTime *= 2;
     }
-    NSLog(@"reconnect");
 }
 
 - (void)disConnect{
-    NSLog(@"disConnect");
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosedByUser;
     [self o_disConnect];
 }
 
 - (void)o_disConnect{
-    NSLog(@"o_disConnect");
 
     _beatCount = 0;
     _reConnectTime = 0;
@@ -149,9 +146,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
                 [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
                 [weakSelf reconnect];
             }else{
-                NSLog(@"sendBeat");
                 //和服务端约定好发送什么作为心跳标识，尽可能的减小心跳包大小
-                [weakSelf oSocketSend:@"cargod" type:OSocketSendTypeForPing];
+                [weakSelf oSocketSend:weakSelf.pingMsg type:OSocketSendTypeForPing];
             }
             
         }];
@@ -161,7 +157,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 -(void)destoryHeartBeat
 {
-    NSLog(@"destoryHeartBeat");
+
     dispatch_main_async_safe_o(^{
         if (_heartBeat) {
             [_heartBeat invalidate];
@@ -176,7 +172,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 #pragma mark -- SRWebSocketDelegate
 - (void)webSocketDidOpen:(SRWebSocket *)webSocket{
-    NSLog(@"webSocketDidOpen");
+
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusConnected;
     
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectSuccess)]) {
@@ -192,7 +188,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didFailWithError:(NSError *)error{
-    NSLog(@"didFailWithError");
+
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusFailure;
     
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectFailWithError:)]) {
@@ -206,7 +202,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message{
-    NSLog(@"didReceiveMessage");
+
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketReceiveMessage:)]) {
         [_delegate oSocketReceiveMessage:message];
     }
@@ -215,7 +211,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didCloseWithCode:(NSInteger)code reason:(NSString *)reason wasClean:(BOOL)wasClean{
-    NSLog(@"didCloseWithCode");
+
     if ([OSocketRocketManager shareManager].socketStatus != OSocketStatusClosedByUser) {
         [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
         [self reconnect];
@@ -233,7 +229,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceivePong:(NSData *)pongPayload{
-    NSLog(@"didReceivePong");
+
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectReceivePong:)]) {
         [_delegate oSocketConnectReceivePong:pongPayload];
     }

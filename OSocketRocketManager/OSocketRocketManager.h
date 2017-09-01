@@ -59,6 +59,13 @@ typedef void(^OSocketCloseBlock)(NSInteger code, NSString *reason, BOOL wasClean
  */
 @property (nonatomic, assign) NSUInteger reconnectCount;
 
+@property (nonatomic, copy) NSString *socketURL;
+
+/**
+ 心跳发的ping 默认发空字符串
+ */
+@property (nonatomic, copy) NSString *pingMsg;
+
 @property (nonatomic, weak) id <OSocketDelegate> delegate;
 
 @property (nonatomic, copy) OSocketReceiveBlock receive;
