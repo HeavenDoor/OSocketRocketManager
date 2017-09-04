@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
 
   s.name                 = "OSocketRocketManager"
-  s.version              = "1.0.2"
+  s.version              = "1.0.3"
   s.summary              = "SocketRocket二次封装"
   s.description          = <<-DESC
-                           SocketRocket二次封装 1.0.2版本
+                           SocketRocket二次封装 1.0.3版本
                            DESC
   s.homepage             = "https://github.com/Leuangwn/OSocketRocketManager"
   s.license              = { :type => "MIT", :file => "LICENSE" }

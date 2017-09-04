@@ -225,6 +225,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
     [OSocketRocketManager shareManager].close ? [OSocketRocketManager shareManager].close(code,reason,wasClean) : nil;
     
+    [self destoryHeartBeat];
+    
     self.webSocket = nil;
 }
 
