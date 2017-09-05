@@ -9,7 +9,6 @@
 #import "OSocketRocketManager.h"
 
 #import "SocketRocket.h"
-#import "RealReachability.h"
 
 #define BeatDuration  2        //心跳频率
 #define MaxBeatMissCount   5   //最大心跳丢失数
