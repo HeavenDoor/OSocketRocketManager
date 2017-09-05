@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
 
   s.name                 = "OSocketRocketManager"
-  s.version              = "1.0.4"
+  s.version              = "1.0.5"
   s.summary              = "SocketRocket二次封装"
   s.description          = <<-DESC
-                           SocketRocket二次封装 1.0.4版本
+                           SocketRocket二次封装 1.0.5版本
                            （添加连接open后马上要执行的数据同步方法，使用时建一个子类使用吧骚年）
                            DESC
   s.homepage             = "https://github.com/Leuangwn/OSocketRocketManager"
