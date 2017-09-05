@@ -118,4 +118,8 @@ typedef void(^OSocketCloseBlock)(NSInteger code, NSString *reason, BOOL wasClean
 - (void)oSocketClose:(OSocketCloseBlock)close;
 
 
+/**
+ 用于socket连接后，数据同步（配合自己后台使用的）
+ */
+- (void)oSocketSync;
 @end

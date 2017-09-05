@@ -8,7 +8,8 @@
 
 #import "OSocketRocketManager.h"
 
-#import "SRWebSocket.h"
+#import "SocketRocket.h"
+#import "RealReachability.h"
 
 #define BeatDuration  2        //心跳频率
 #define MaxBeatMissCount   5   //最大心跳丢失数
@@ -58,7 +59,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (OSocketStatus)oSocketSend:(id)data type:(OSocketSendType)type{
-//warning 发现有时候后台发close之后这里木有收到回调
+
     if (_webSocket.readyState != SR_OPEN) return [OSocketRocketManager shareManager].socketStatus;
     
     if ([OSocketRocketManager shareManager].socketStatus == OSocketStatusConnected){
@@ -121,7 +122,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)o_disConnect{
-
+    
     _beatCount = 0;
     _reConnectTime = 0;
     
@@ -157,13 +158,15 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 -(void)destoryHeartBeat
 {
+    if (_heartBeat) {
+        [_heartBeat invalidate];
+        _heartBeat = nil;
+    }
+}
 
-    dispatch_main_async_safe_o(^{
-        if (_heartBeat) {
-            [_heartBeat invalidate];
-            _heartBeat = nil;
-        }
-    })
+- (void)oSocketSync
+{
+    
 }
 
 - (void)dealloc{
@@ -172,7 +175,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 #pragma mark -- SRWebSocketDelegate
 - (void)webSocketDidOpen:(SRWebSocket *)webSocket{
-
+    
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusConnected;
     
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectSuccess)]) {
@@ -185,10 +188,13 @@ dispatch_async(dispatch_get_main_queue(), block);\
     _beatCount = 0;
     
     [self sendBeat];
+    
+    [self oSocketSync];
+    
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didFailWithError:(NSError *)error{
-
+    
     [OSocketRocketManager shareManager].socketStatus = OSocketStatusFailure;
     
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectFailWithError:)]) {
@@ -202,7 +208,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message{
-
+    
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketReceiveMessage:)]) {
         [_delegate oSocketReceiveMessage:message];
     }
@@ -211,7 +217,9 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didCloseWithCode:(NSInteger)code reason:(NSString *)reason wasClean:(BOOL)wasClean{
-
+    
+    [self destoryHeartBeat];
+    
     if ([OSocketRocketManager shareManager].socketStatus != OSocketStatusClosedByUser) {
         [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
         [self reconnect];
@@ -225,13 +233,12 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
     [OSocketRocketManager shareManager].close ? [OSocketRocketManager shareManager].close(code,reason,wasClean) : nil;
     
-    [self destoryHeartBeat];
     
     self.webSocket = nil;
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceivePong:(NSData *)pongPayload{
-
+    
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectReceivePong:)]) {
         [_delegate oSocketConnectReceivePong:pongPayload];
     }
@@ -242,6 +249,44 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
 }
 
+
+
+- (NSString*)convertToJsonData:(NSDictionary*)dic
+{
+    
+    NSError *error;
+    
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:dic options:NSJSONWritingPrettyPrinted error:&error];
+    
+    NSString *jsonString;
+    
+    if (!jsonData) {
+        
+        NSLog(@"%@",error);
+        
+    }else{
+        
+        jsonString = [[NSString alloc]initWithData:jsonData encoding:NSUTF8StringEncoding];
+        
+    }
+    
+    NSMutableString *mutStr = [NSMutableString stringWithString:jsonString];
+    
+    NSRange range = {0,jsonString.length};
+    
+    //去掉字符串中的空格
+    
+    [mutStr replaceOccurrencesOfString:@" " withString:@"" options:NSLiteralSearch range:range];
+    
+    NSRange range2 = {0,mutStr.length};
+    
+    //去掉字符串中的换行符
+    
+    [mutStr replaceOccurrencesOfString:@"\n" withString:@"" options:NSLiteralSearch range:range2];
+    
+    return mutStr;
+    
+}
 
 
 @end
