@@ -58,8 +58,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (OSocketStatus)oSocketSend:(id)data type:(OSocketSendType)type{
-
-    if (_webSocket.readyState != SR_OPEN) return [OSocketRocketManager shareManager].socketStatus;
+    
+    //    if (_webSocket.readyState != SR_OPEN) return [OSocketRocketManager shareManager].socketStatus;
     
     if ([OSocketRocketManager shareManager].socketStatus == OSocketStatusConnected){
         switch (type) {
@@ -122,6 +122,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 - (void)o_disConnect{
     
+    [self destoryHeartBeat];
+    
     _beatCount = 0;
     _reConnectTime = 0;
     
@@ -135,24 +137,31 @@ dispatch_async(dispatch_get_main_queue(), block);\
 {
     
     dispatch_main_async_safe_o(^{
-        __weak typeof (self) weakSelf=self;
-        //心跳设置为3分钟，NAT超时一般为5分钟
-        _heartBeat = [NSTimer scheduledTimerWithTimeInterval:BeatDuration repeats:YES block:^(NSTimer * _Nonnull timer) {
-            _beatCount++;
-            //超过5次未收到服务器心跳 , 置为未连接状态
-            if (_beatCount > MaxBeatMissCount) {
-                [weakSelf destoryHeartBeat];
-                //更新连接状态
-                [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
-                [weakSelf reconnect];
-            }else{
-                //和服务端约定好发送什么作为心跳标识，尽可能的减小心跳包大小
-                [weakSelf oSocketSend:weakSelf.pingMsg type:OSocketSendTypeForPing];
-            }
-            
-        }];
+        //        __weak typeof (self) weakSelf=self;
+        //        心跳设置为3分钟，NAT超时一般为5分钟
+        //        _heartBeat = [NSTimer scheduledTimerWithTimeInterval:BeatDuration repeats:YES block:^(NSTimer * _Nonnull timer) {
+        //
+        //            [weakSelf beating];
+        //        }];
+        // 真机运行 出现循坏引用问题 改为旧方法就木有问题````
+        _heartBeat = [NSTimer scheduledTimerWithTimeInterval:BeatDuration target:self selector:@selector(beating)
+                                                    userInfo:nil repeats:YES];
         [[NSRunLoop currentRunLoop] addTimer:_heartBeat forMode:NSRunLoopCommonModes];
     })
+}
+
+- (void)beating{
+    _beatCount++;
+    //超过5次未收到服务器心跳 , 置为未连接状态
+    if (_beatCount > MaxBeatMissCount) {
+        [self destoryHeartBeat];
+        //更新连接状态
+        [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
+        [self reconnect];
+    }else{
+        //和服务端约定好发送什么作为心跳标识，尽可能的减小心跳包大小
+        [self oSocketSend:self.pingMsg type:OSocketSendTypeForPing];
+    }
 }
 
 -(void)destoryHeartBeat
@@ -170,6 +179,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 - (void)dealloc{
     [self disConnect];
+    
 }
 
 #pragma mark -- SRWebSocketDelegate
@@ -208,6 +218,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceiveMessage:(id)message{
     
+    [OSocketRocketManager shareManager].socketStatus = OSocketStatusConnected;
+    
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketReceiveMessage:)]) {
         [_delegate oSocketReceiveMessage:message];
     }
@@ -216,8 +228,6 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)webSocket:(SRWebSocket *)webSocket didCloseWithCode:(NSInteger)code reason:(NSString *)reason wasClean:(BOOL)wasClean{
-    
-    [self destoryHeartBeat];
     
     if ([OSocketRocketManager shareManager].socketStatus != OSocketStatusClosedByUser) {
         [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
@@ -238,6 +248,8 @@ dispatch_async(dispatch_get_main_queue(), block);\
 
 - (void)webSocket:(SRWebSocket *)webSocket didReceivePong:(NSData *)pongPayload{
     
+    [OSocketRocketManager shareManager].socketStatus = OSocketStatusConnected;
+    
     if (_delegate && [_delegate respondsToSelector:@selector(oSocketConnectReceivePong:)]) {
         [_delegate oSocketConnectReceivePong:pongPayload];
     }
@@ -248,44 +260,6 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
 }
 
-
-
-- (NSString*)convertToJsonData:(NSDictionary*)dic
-{
-    
-    NSError *error;
-    
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:dic options:NSJSONWritingPrettyPrinted error:&error];
-    
-    NSString *jsonString;
-    
-    if (!jsonData) {
-        
-        NSLog(@"%@",error);
-        
-    }else{
-        
-        jsonString = [[NSString alloc]initWithData:jsonData encoding:NSUTF8StringEncoding];
-        
-    }
-    
-    NSMutableString *mutStr = [NSMutableString stringWithString:jsonString];
-    
-    NSRange range = {0,jsonString.length};
-    
-    //去掉字符串中的空格
-    
-    [mutStr replaceOccurrencesOfString:@" " withString:@"" options:NSLiteralSearch range:range];
-    
-    NSRange range2 = {0,mutStr.length};
-    
-    //去掉字符串中的换行符
-    
-    [mutStr replaceOccurrencesOfString:@"\n" withString:@"" options:NSLiteralSearch range:range2];
-    
-    return mutStr;
-    
-}
 
 
 @end
