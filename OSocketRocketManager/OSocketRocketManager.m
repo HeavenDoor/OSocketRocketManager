@@ -144,7 +144,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
         //            [weakSelf beating];
         //        }];
         // 真机运行 出现循坏引用问题 改为旧方法就木有问题````
-        _heartBeat = [NSTimer scheduledTimerWithTimeInterval:BeatDuration target:self selector:@selector(beating)
+        _heartBeat = [NSTimer scheduledTimerWithTimeInterval:self.pingInterval target:self selector:@selector(beating)
                                                     userInfo:nil repeats:YES];
         [[NSRunLoop currentRunLoop] addTimer:_heartBeat forMode:NSRunLoopCommonModes];
     })

@@ -66,6 +66,10 @@ typedef void(^OSocketCloseBlock)(NSInteger code, NSString *reason, BOOL wasClean
  */
 @property (nonatomic, copy) NSString *pingMsg;
 
+@property (nonatomic, assign) pingInterval;
+
+@property (nonatomic, assign) pingTimeout;
+
 @property (nonatomic, weak) id <OSocketDelegate> delegate;
 
 @property (nonatomic, copy) OSocketReceiveBlock receive;
