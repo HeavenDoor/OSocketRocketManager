@@ -86,7 +86,10 @@ dispatch_async(dispatch_get_main_queue(), block);\
 }
 
 - (void)connect{
-    if (_webSocket) return;
+    if (_webSocket) {
+        [_webSocket close];
+        _webSocket = nil;
+    };
     
     _webSocket = [[SRWebSocket alloc]initWithURL:[NSURL URLWithString:self.socketURL]];
     _webSocket.delegate = self;
@@ -212,7 +215,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
     [OSocketRocketManager shareManager].failure ? [OSocketRocketManager shareManager].failure(error) : nil;
     
-    [self reconnect];
+    //[self reconnect];
     
 }
 
@@ -231,7 +234,7 @@ dispatch_async(dispatch_get_main_queue(), block);\
     
     if ([OSocketRocketManager shareManager].socketStatus != OSocketStatusClosedByUser) {
         [OSocketRocketManager shareManager].socketStatus = OSocketStatusClosed;
-        [self reconnect];
+        //[self reconnect];
     }else{
         [self disConnect];
     }
